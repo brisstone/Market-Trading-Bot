@@ -1,0 +1,62 @@
+#  Template NodeJS build
+
+#  This template allows you to validate your NodeJS code.
+#  The workflow allows running tests and code linting on the default branch.
+
+image: node:16.14.2
+#image: node:10.15.3
+
+clone:
+  depth: full
+
+pipelines:
+  branches:
+    release/test:        
+      - step:
+          name: Install & Test
+          script:
+            - npm install
+            #- npm test
+      - step:
+          name: Publish to AWS ECR
+          services:
+            - docker
+          caches:
+            - docker
+          script:
+          # build the image
+          - docker build -t trading-bot-test .
+          
+          # use the pipe to push the image to AWS ECR
+          - pipe: atlassian/aws-ecr-push-image:1.4.2
+            variables:
+              AWS_ACCESS_KEY_ID: '$AWS_ACCESS_KEY_ID' # Optional if already defined in the context.
+              AWS_SECRET_ACCESS_KEY: '$AWS_SECRET_ACCESS_KEY' # Optional if already defined in the context.
+              AWS_DEFAULT_REGION: '$AWS_DEFAULT_REGION' # Optional if already defined in the context.
+              IMAGE_NAME: "trading-bot-test"
+              # TAGS: "<string>" # Optional
+              # DEBUG: "<boolean>" # Optional
+    release/production:        
+      - step:
+          name: Publish to AWS ECR
+          services:
+            - docker
+          caches:
+            - docker
+          script:
+          # build the image
+          - docker build -t trading-bot .
+          
+          # use the pipe to push the image to AWS ECR
+          - pipe: atlassian/aws-ecr-push-image:1.4.2
+            variables:
+              AWS_ACCESS_KEY_ID: '$AWS_ACCESS_KEY_ID' # Optional if already defined in the context.
+              AWS_SECRET_ACCESS_KEY: '$AWS_SECRET_ACCESS_KEY' # Optional if already defined in the context.
+              AWS_DEFAULT_REGION: '$AWS_DEFAULT_REGION' # Optional if already defined in the context.
+              IMAGE_NAME: "trading-bot"
+              # TAGS: "<string>" # Optional
+              # DEBUG: "<boolean>" # Optional
+definitions:
+  services:
+    docker:
+      memory: 3072
